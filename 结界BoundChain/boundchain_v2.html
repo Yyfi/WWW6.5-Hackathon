@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>结界 BoundChain — 女性空间主权协议</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=Share+Tech+Mono&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<style>
+:root {
+  --black:   #050507;
+  --deep:    #0a0a10;
+  --surface: #0f0f18;
+  --border:  #1e1e2e;
+  --dim:     #2a2a3e;
+  --muted:   #4a4a6a;
+  --text:    #c8c8d8;
+  --bright:  #e8e8f0;
+  --accent:  #7eb8c9;
+  --glow:    #4a9fb5;
+  --green:   #5cb88a;
+  --red:     #c96b6b;
+  --gold:    #c9a86b;
+  --font-sans: 'Noto Serif SC', serif;
+  --font-mono: 'Share Tech Mono', monospace;
+  --font-disp: 'Cormorant Garamond', serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background: var(--black);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.7;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+  pointer-events:none; z-index:9999;
+}
+.ambient { position:fixed; width:600px; height:600px; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
+.ambient-1 { top:-200px; left:-200px; background:radial-gradient(circle,rgba(74,159,181,0.06) 0%,transparent 70%); }
+.ambient-2 { bottom:-200px; right:-200px; background:radial-gradient(circle,rgba(92,184,138,0.04) 0%,transparent 70%); }
+.container { max-width:960px; margin:0 auto; padding:0 32px; position:relative; z-index:1; }
+
+/* HERO */
+.hero { min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding:80px 0; }
+.hero-eyebrow { font-family:var(--font-mono); font-size:11px; letter-spacing:0.3em; color:var(--glow); text-transform:uppercase; margin-bottom:32px; opacity:0; animation:fadeUp 0.8s ease forwards 0.2s; }
+.hero-title { font-family:var(--font-disp); font-size:clamp(52px,8vw,88px); font-weight:300; line-height:1.05; color:var(--bright); margin-bottom:16px; opacity:0; animation:fadeUp 0.8s ease forwards 0.4s; }
+.hero-title em { font-style:italic; color:var(--accent); }
+.hero-sub { font-family:var(--font-mono); font-size:12px; color:var(--muted); letter-spacing:0.15em; margin-bottom:48px; opacity:0; animation:fadeUp 0.8s ease forwards 0.5s; }
+.hero-statement { max-width:520px; font-size:15px; color:var(--text); line-height:1.9; margin-bottom:56px; border-left:1px solid var(--glow); padding-left:24px; opacity:0; animation:fadeUp 0.8s ease forwards 0.6s; }
+.hero-statement strong { color:var(--bright); font-weight:600; }
+.btn-connect { display:inline-flex; align-items:center; gap:12px; padding:14px 32px; border:1px solid var(--glow); background:transparent; color:var(--accent); font-family:var(--font-mono); font-size:12px; letter-spacing:0.2em; cursor:pointer; transition:all 0.3s; opacity:0; animation:fadeUp 0.8s ease forwards 0.8s; text-transform:uppercase; }
+.btn-connect:hover { background:rgba(74,159,181,0.08); box-shadow:0 0 24px rgba(74,159,181,0.15); }
+.btn-connect .dot { width:6px; height:6px; border-radius:50%; background:var(--glow); animation:pulse 2s infinite; }
+
+/* STATUS BAR */
+.status-bar { position:fixed; top:0; left:0; right:0; height:48px; background:rgba(5,5,7,0.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 32px; z-index:100; }
+.status-brand { font-family:var(--font-mono); font-size:11px; letter-spacing:0.25em; color:var(--glow); }
+.status-wallet { font-family:var(--font-mono); font-size:11px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+.status-wallet .indicator { width:6px; height:6px; border-radius:50%; background:var(--muted); }
+.status-wallet.connected .indicator { background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse 2s infinite; }
+.chain-badge { font-family:var(--font-mono); font-size:10px; padding:3px 8px; border:1px solid var(--border); color:var(--muted); letter-spacing:0.1em; }
+
+/* DIVIDER */
+.section-divider { display:flex; align-items:center; gap:16px; margin:80px 0 48px; }
+.section-divider::before,.section-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+.section-label { font-family:var(--font-mono); font-size:10px; letter-spacing:0.3em; color:var(--muted); text-transform:uppercase; white-space:nowrap; }
+
+/* PANELS */
+.panel { background:var(--surface); border:1px solid var(--border); padding:32px; margin-bottom:16px; position:relative; overflow:hidden; }
+.panel::before { content:''; position:absolute; top:0; left:0; width:2px; height:100%; background:var(--glow); opacity:0.4; }
+.panel-title { font-family:var(--font-mono); font-size:10px; letter-spacing:0.3em; color:var(--glow); text-transform:uppercase; margin-bottom:24px; }
+
+/* ROLE TABS */
+.role-tabs { display:flex; border:1px solid var(--border); margin-bottom:32px; }
+.role-tab { flex:1; padding:12px; background:transparent; border:none; color:var(--muted); font-family:var(--font-mono); font-size:11px; letter-spacing:0.2em; cursor:pointer; transition:all 0.3s; text-transform:uppercase; }
+.role-tab.active { background:rgba(74,159,181,0.08); color:var(--accent); border-bottom:1px solid var(--glow); }
+.role-tab:not(:last-child) { border-right:1px solid var(--border); }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* DEVICE CARD */
+.device-card { border:1px solid var(--border); padding:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; transition:border-color 0.3s; margin-bottom:8px; }
+.device-card:hover { border-color:var(--glow); background:rgba(74,159,181,0.03); }
+.device-info { flex:1; min-width:0; }
+.device-name { font-size:16px; color:var(--bright); font-weight:600; margin-bottom:4px; }
+.device-addr { font-family:var(--font-mono); font-size:11px; color:var(--muted); word-break:break-all; }
+.device-owner-tag { font-family:var(--font-mono); font-size:10px; color:var(--gold); margin-top:4px; }
+.device-status { display:flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:11px; white-space:nowrap; }
+.status-dot { width:8px; height:8px; border-radius:50%; }
+.status-dot.active { background:var(--green); box-shadow:0 0 8px var(--green); }
+
+/* BUTTONS */
+.btn-access { padding:10px 24px; border:1px solid var(--glow); background:transparent; color:var(--accent); font-family:var(--font-mono); font-size:11px; letter-spacing:0.15em; cursor:pointer; transition:all 0.3s; text-transform:uppercase; white-space:nowrap; }
+.btn-access:hover { background:rgba(74,159,181,0.1); box-shadow:0 0 16px rgba(74,159,181,0.2); }
+.btn-access:disabled { opacity:0.3; cursor:not-allowed; }
+.btn-danger { border-color:var(--red); color:var(--red); }
+.btn-danger:hover { background:rgba(201,107,107,0.1); }
+
+/* FORM */
+.form-group { margin-bottom:16px; }
+.form-label { font-family:var(--font-mono); font-size:10px; letter-spacing:0.2em; color:var(--muted); text-transform:uppercase; display:block; margin-bottom:8px; }
+.form-input { width:100%; padding:10px 14px; background:var(--deep); border:1px solid var(--border); color:var(--text); font-family:var(--font-mono); font-size:12px; outline:none; transition:border-color 0.3s; }
+.form-input:focus { border-color:var(--glow); }
+.form-input::placeholder { color:var(--muted); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.btn-submit { padding:10px 24px; background:rgba(74,159,181,0.1); border:1px solid var(--glow); color:var(--accent); font-family:var(--font-mono); font-size:11px; letter-spacing:0.2em; cursor:pointer; transition:all 0.3s; text-transform:uppercase; width:100%; margin-top:8px; }
+.btn-submit:hover { background:rgba(74,159,181,0.2); }
+.btn-submit-danger { background:rgba(201,107,107,0.05); border-color:var(--red); color:var(--red); }
+.btn-submit-danger:hover { background:rgba(201,107,107,0.15); }
+
+/* LOG */
+.log-feed { display:flex; flex-direction:column; gap:1px; }
+.log-entry { background:var(--deep); border:1px solid var(--border); padding:16px 20px; display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:center; animation:slideIn 0.4s ease; }
+.log-entry.success { border-left:2px solid var(--green); }
+.log-entry.denied  { border-left:2px solid var(--red); }
+.log-time { font-family:var(--font-mono); font-size:10px; color:var(--muted); white-space:nowrap; }
+.log-body { min-width:0; }
+.log-addr { font-family:var(--font-mono); font-size:12px; color:var(--accent); margin-bottom:2px; }
+.log-msg { font-size:12px; color:var(--text); }
+.log-hash { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-decoration:none; transition:color 0.2s; white-space:nowrap; }
+.log-hash:hover { color:var(--accent); }
+
+/* MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(5,5,7,0.85); backdrop-filter:blur(8px); z-index:200; display:none; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); padding:48px; max-width:480px; width:90%; text-align:center; animation:scaleIn 0.3s ease; }
+.modal-icon { font-size:48px; margin-bottom:24px; display:block; }
+.modal-title { font-family:var(--font-disp); font-size:28px; font-weight:300; color:var(--bright); margin-bottom:12px; }
+.modal-body { font-family:var(--font-mono); font-size:11px; color:var(--muted); line-height:1.8; margin-bottom:32px; }
+.modal-body .highlight { color:var(--accent); display:block; margin-top:8px; }
+.modal-close { padding:10px 32px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--font-mono); font-size:11px; letter-spacing:0.2em; cursor:pointer; transition:all 0.3s; text-transform:uppercase; }
+.modal-close:hover { border-color:var(--glow); color:var(--accent); }
+
+/* TOAST */
+.toast { position:fixed; bottom:32px; right:32px; padding:12px 20px; background:var(--surface); border:1px solid var(--border); font-family:var(--font-mono); font-size:11px; color:var(--text); z-index:300; transform:translateY(16px); opacity:0; transition:all 0.3s; max-width:320px; border-left:2px solid var(--glow); }
+.toast.show { transform:translateY(0); opacity:1; }
+
+/* EMPTY */
+.empty-state { padding:40px; text-align:center; color:var(--muted); font-family:var(--font-mono); font-size:11px; letter-spacing:0.1em; border:1px dashed var(--border); }
+
+/* INFO BOX */
+.info-box { padding:16px 20px; background:rgba(74,159,181,0.05); border:1px solid rgba(74,159,181,0.2); font-family:var(--font-mono); font-size:11px; color:var(--accent); line-height:1.8; margin-bottom:24px; }
+.info-box .label { color:var(--muted); margin-right:8px; }
+
+/* FOOTER */
+.footer { margin-top:120px; padding:48px 0; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.footer-brand { font-family:var(--font-disp); font-size:18px; font-weight:300; color:var(--muted); }
+.footer-meta { font-family:var(--font-mono); font-size:10px; color:var(--dim); text-align:right; line-height:1.8; }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+@keyframes scaleIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin { to{transform:rotate(360deg)} }
+.spinner { display:inline-block; width:12px; height:12px; border:1px solid var(--border); border-top-color:var(--glow); border-radius:50%; animation:spin 0.8s linear infinite; }
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-brand">结界 / BOUNDCHAIN · V4</div>
+  <div class="status-wallet" id="statusWallet">
+    <div class="indicator"></div>
+    <span id="walletLabel">未连接钱包</span>
+    <span class="chain-badge">SEPOLIA</span>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">女性空间主权协议 · Device Sovereignty Protocol</div>
+    <h1 class="hero-title">你的空间，<br><em>只有你</em><br>说了算。</h1>
+    <div class="hero-sub">BOUNDCHAIN · V4 · NO ADMIN · SEPOLIA TESTNET</div>
+    <p class="hero-statement">
+      在这个世界上，<strong>女性最需要安全感的地方，往往是最容易被侵犯的地方。</strong><br><br>
+      结界没有管理员。<strong>你注册你的设备，你决定谁能进入。</strong>
+      没有任何第三方可以越过你做决定。<br><br>
+      每一次有人进入你的空间，链上永久留痕，无法抵赖。
+    </p>
+    <button class="btn-connect" onclick="connectWallet()">
+      <div class="dot"></div>
+      <span id="connectBtnText">连接钱包 · Connect Wallet</span>
+    </button>
+  </div>
+</section>
+
+<!-- MAIN APP -->
+<div id="appSection" class="hidden">
+<div class="container">
+
+  <div class="section-divider">
+    <span class="section-label">控制台 · Dashboard</span>
+  </div>
+
+  <!-- TABS: 我的设备 / 访问设备 -->
+  <div class="role-tabs">
+    <button class="role-tab active" id="tab-btn-owner" onclick="switchTab('owner')">我是设备主人 · Owner</button>
+    <button class="role-tab" id="tab-btn-user" onclick="switchTab('user')">我是访客 · Visitor</button>
+  </div>
+
+  <!-- ── 设备主人视角 ── -->
+  <div class="tab-content active" id="tab-owner">
+
+    <!-- 当前钱包身份 -->
+    <div class="info-box" id="ownerInfo">
+      <span class="label">当前身份：</span><span id="ownerAddrDisplay">—</span>
+    </div>
+
+    <!-- 注册新设备 -->
+    <div class="panel">
+      <div class="panel-title">// 注册我的设备</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.8;">
+        将你的智能摄像头或门锁注册上链。注册后你的钱包地址将成为该设备的唯一主人，
+        任何人无法在未经你授权的情况下访问。
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">设备公钥地址（Python 启动后打印）</label>
+          <input class="form-input" id="regDevAddr" placeholder="0x..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">设备名称</label>
+          <input class="form-input" id="regDevName" placeholder="客厅摄像头" />
+        </div>
+      </div>
+      <button class="btn-submit" onclick="ownerRegisterDevice()">注册设备上链 →</button>
+    </div>
+
+    <!-- 我拥有的设备 -->
+    <div class="panel">
+      <div class="panel-title">// 我拥有的设备</div>
+      <div id="ownedDeviceList">
+        <div class="empty-state">暂无已注册设备</div>
+      </div>
+    </div>
+
+    <!-- 授权管理 -->
+    <div class="panel">
+      <div class="panel-title">// 访问权限管理</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.8;">
+        你决定谁能访问你的设备。授权或撤销，链上即时生效。
+      </p>
+      <div class="form-group">
+        <label class="form-label">被授权人的钱包地址</label>
+        <input class="form-input" id="aclUserAddr" placeholder="0x..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">目标设备地址</label>
+        <input class="form-input" id="aclDevAddr" placeholder="0x..." />
+      </div>
+      <div class="form-row">
+        <button class="btn-submit" onclick="ownerGrantAccess()">授予访问权限 ↑</button>
+        <button class="btn-submit btn-submit-danger" onclick="ownerRevokeAccess()">撤销访问权限 ↓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 访客视角 ── -->
+  <div class="tab-content" id="tab-user">
+    <div class="info-box">
+      <span class="label">访客身份：</span><span id="visitorAddrDisplay">—</span>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">// 我的授权设备</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.8;">
+        以下是设备主人授权你访问的设备。点击「请求访问」将触发 MetaMask 签名验证，
+        认证通过后访问记录将永久写入区块链。
+      </p>
+      <div id="visitorDeviceList">
+        <div class="empty-state">连接钱包后自动加载授权设备...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 链上访问日志 ── -->
+  <div class="section-divider">
+    <span class="section-label">链上访问日志 · 谁看了你 · 不可篡改</span>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">// On-chain Access Log · 无法抵赖</div>
+    <div class="log-feed" id="logFeed">
+      <div class="empty-state">暂无链上访问记录 · 等待首次认证...</div>
+    </div>
+  </div>
+  <div style="margin:16px 0 0; text-align:right;">
+    <button class="btn-access" onclick="refreshLogs()" style="font-size:10px;">刷新日志 ↻</button>
+  </div>
+
+</div>
+</div>
+
+<!-- FOOTER -->
+<div class="container">
+  <footer class="footer">
+    <div class="footer-brand">结界 · BoundChain</div>
+    <div class="footer-meta">女性空间主权协议 · V4 无管理员架构<br>Herstory Hackathon 2026 · 赛道一</div>
+  </footer>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <span class="modal-icon" id="modalIcon">🔐</span>
+    <div class="modal-title" id="modalTitle">认证中...</div>
+    <div class="modal-body" id="modalBody"></div>
+    <button class="modal-close" onclick="closeModal()">关闭</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
+const CONTRACT_ADDRESS = "0xa5f5984184b6E0BbAa02758e94d6B714F3f48a8A";  // ⚠️ 部署 V4 后更新
+const DEVICE_ADDRESS   = "0x820f8965453eF402Cf7bB870d37D88120d03D1F3";
+const DEVICE_NAME      = "客厅摄像头";
+const PYTHON_ENDPOINT  = "http://localhost:5000/access";
+const SEPOLIA_CHAIN_ID = "0xaa36a7";
+
+const CONTRACT_ABI = [
+  {
+    "inputs":[{"internalType":"address","name":"_device","type":"address"},{"internalType":"string","name":"_name","type":"string"}],
+    "name":"registerDevice","outputs":[],"stateMutability":"nonpayable","type":"function"
+  },
+  {
+    "inputs":[{"internalType":"address","name":"_user","type":"address"},{"internalType":"address","name":"_device","type":"address"}],
+    "name":"grantAccess","outputs":[],"stateMutability":"nonpayable","type":"function"
+  },
+  {
+    "inputs":[{"internalType":"address","name":"_user","type":"address"},{"internalType":"address","name":"_device","type":"address"}],
+    "name":"revokeAccess","outputs":[],"stateMutability":"nonpayable","type":"function"
+  },
+  {
+    "inputs":[{"internalType":"address","name":"_user","type":"address"},{"internalType":"address","name":"_device","type":"address"}],
+    "name":"checkAccess","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"
+  },
+  {
+    "inputs":[{"internalType":"address","name":"_device","type":"address"}],
+    "name":"getDeviceOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"
+  },
+  {
+    "inputs":[{"internalType":"address","name":"","type":"address"}],
+    "name":"devices","outputs":[
+      {"internalType":"string","name":"name","type":"string"},
+      {"internalType":"address","name":"owner","type":"address"},
+      {"internalType":"bool","name":"isRegistered","type":"bool"},
+      {"internalType":"bool","name":"isActive","type":"bool"}
+    ],"stateMutability":"view","type":"function"
+  },
+  {
+    "anonymous":false,
+    "inputs":[
+      {"indexed":true,"internalType":"address","name":"user","type":"address"},
+      {"indexed":true,"internalType":"address","name":"device","type":"address"},
+      {"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}
+    ],
+    "name":"AccessLogged","type":"event"
+  },
+  {
+    "anonymous":false,
+    "inputs":[
+      {"indexed":true,"internalType":"address","name":"deviceAddress","type":"address"},
+      {"indexed":true,"internalType":"address","name":"owner","type":"address"},
+      {"internalType":"string","name":"name","type":"string"}
+    ],
+    "name":"DeviceRegistered","type":"event"
+  }
+];
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let provider, signer, contract, currentAddress;
+
+// ══════════════════════════════════════
+// WALLET
+// ══════════════════════════════════════
+async function connectWallet() {
+  if (!window.ethereum) { showToast("请先安装 MetaMask 浏览器插件"); return; }
+  try {
+    const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
+    currentAddress = accounts[0];
+
+    const chainId = await window.ethereum.request({ method:'eth_chainId' });
+    if (chainId !== SEPOLIA_CHAIN_ID) {
+      try {
+        await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{chainId:SEPOLIA_CHAIN_ID}] });
+      } catch(e) { showToast("请切换到 Sepolia 测试网"); return; }
+    }
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer   = await provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+    // Update UI
+    const sw = document.getElementById('statusWallet');
+    sw.classList.add('connected');
+    document.getElementById('walletLabel').textContent = shortAddr(currentAddress);
+    document.getElementById('ownerAddrDisplay').textContent = currentAddress;
+    document.getElementById('visitorAddrDisplay').textContent = currentAddress;
+    document.getElementById('connectBtnText').textContent = shortAddr(currentAddress) + ' · 已连接';
+    document.querySelector('.btn-connect .dot').style.background = 'var(--green)';
+    document.getElementById('appSection').classList.remove('hidden');
+    document.getElementById('appSection').scrollIntoView({ behavior:'smooth' });
+
+    await loadOwnedDevices();
+    await loadVisitorDevices();
+    await refreshLogs();
+
+    showToast("钱包连接成功 · " + shortAddr(currentAddress));
+
+    window.ethereum.on('accountsChanged', async(accs) => {
+      if (!accs.length) { location.reload(); return; }
+      currentAddress = accs[0];
+      document.getElementById('walletLabel').textContent = shortAddr(currentAddress);
+      document.getElementById('ownerAddrDisplay').textContent = currentAddress;
+      document.getElementById('visitorAddrDisplay').textContent = currentAddress;
+      signer = await provider.getSigner();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      await loadOwnedDevices();
+      await loadVisitorDevices();
+    });
+  } catch(e) {
+    showToast("连接失败：" + e.message);
+  }
+}
+
+// ══════════════════════════════════════
+// OWNER: REGISTER DEVICE
+// ══════════════════════════════════════
+async function ownerRegisterDevice() {
+  const addr = document.getElementById('regDevAddr').value.trim();
+  const name = document.getElementById('regDevName').value.trim();
+  if (!addr || !name) { showToast("请填写设备地址和名称"); return; }
+  showToast("发送交易，请在 MetaMask 确认...");
+  try {
+    const tx = await contract.registerDevice(addr, name);
+    showToast("等待上链...");
+    await tx.wait();
+    showToast("✅ 设备注册成功，你是该设备的唯一主人");
+    document.getElementById('regDevAddr').value = '';
+    document.getElementById('regDevName').value = '';
+    await loadOwnedDevices();
+  } catch(e) {
+    showToast("注册失败：" + (e.reason || e.message));
+  }
+}
+
+// ══════════════════════════════════════
+// OWNER: LOAD OWNED DEVICES
+// ══════════════════════════════════════
+async function loadOwnedDevices() {
+  const el = document.getElementById('ownedDeviceList');
+  el.innerHTML = '<div class="empty-state"><span class="spinner"></span>&nbsp;查询中...</div>';
+
+  // Query DeviceRegistered events where owner == currentAddress
+  try {
+    const filter = contract.filters.DeviceRegistered(null, currentAddress);
+    const events = await contract.queryFilter(filter, -10000);
+
+    if (!events.length) {
+      el.innerHTML = '<div class="empty-state">你还没有注册任何设备</div>';
+      return;
+    }
+
+    el.innerHTML = '';
+    for (const ev of events) {
+      const devAddr = ev.args.deviceAddress;
+      const devName = ev.args.name;
+      const card = document.createElement('div');
+      card.className = 'device-card';
+      card.innerHTML = `
+        <div class="device-info">
+          <div class="device-name">${devName}</div>
+          <div class="device-addr">${devAddr}</div>
+          <div class="device-owner-tag">👑 你是主人</div>
+        </div>
+        <div class="device-status">
+          <div class="status-dot active"></div>
+          <span style="color:var(--green);font-size:10px;">已激活</span>
+        </div>
+      `;
+      el.appendChild(card);
+
+      // Auto-fill ACL form with this device
+      card.addEventListener('click', () => {
+        document.getElementById('aclDevAddr').value = devAddr;
+        showToast("已填入设备地址：" + shortAddr(devAddr));
+      });
+    }
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state">查询失败，请确认合约地址已更新</div>';
+  }
+}
+
+// ══════════════════════════════════════
+// OWNER: GRANT / REVOKE
+// ══════════════════════════════════════
+async function ownerGrantAccess() {
+  const user   = document.getElementById('aclUserAddr').value.trim();
+  const device = document.getElementById('aclDevAddr').value.trim();
+  if (!user || !device) { showToast("请填写被授权人地址和设备地址"); return; }
+  showToast("发送授权交易，请在 MetaMask 确认...");
+  try {
+    const tx = await contract.grantAccess(user, device);
+    await tx.wait();
+    showToast("✅ 授权成功，链上 ACL 已更新");
+  } catch(e) {
+    showToast("授权失败：" + (e.reason || e.message));
+  }
+}
+
+async function ownerRevokeAccess() {
+  const user   = document.getElementById('aclUserAddr').value.trim();
+  const device = document.getElementById('aclDevAddr').value.trim();
+  if (!user || !device) { showToast("请填写被撤销人地址和设备地址"); return; }
+  showToast("发送撤销交易，请在 MetaMask 确认...");
+  try {
+    const tx = await contract.revokeAccess(user, device);
+    await tx.wait();
+    showToast("✅ 权限已撤销，链上记录已更新");
+  } catch(e) {
+    showToast("撤销失败：" + (e.reason || e.message));
+  }
+}
+
+// ══════════════════════════════════════
+// VISITOR: LOAD & ACCESS DEVICES
+// ══════════════════════════════════════
+async function loadVisitorDevices() {
+  const el = document.getElementById('visitorDeviceList');
+  el.innerHTML = '<div class="empty-state"><span class="spinner"></span>&nbsp;查询链上权限...</div>';
+
+  const knownDevices = [{ address: DEVICE_ADDRESS, name: DEVICE_NAME }];
+  const authorized = [];
+
+  for (const d of knownDevices) {
+    try {
+      const has = await contract.checkAccess(currentAddress, d.address);
+      if (has) authorized.push(d);
+    } catch(e) {}
+  }
+
+  if (!authorized.length) {
+    el.innerHTML = '<div class="empty-state">该钱包暂无授权设备<br>请联系设备主人获取访问权限</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  authorized.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'device-card';
+    card.innerHTML = `
+      <div class="device-info">
+        <div class="device-name">${d.name}</div>
+        <div class="device-addr">${d.address}</div>
+      </div>
+      <div class="device-status">
+        <div class="status-dot active"></div>
+        <span style="color:var(--green);font-size:10px;">已授权</span>
+      </div>
+      <button class="btn-access" onclick="requestAccess('${d.address}','${d.name}',this)">请求访问 →</button>
+    `;
+    el.appendChild(card);
+  });
+}
+
+async function requestAccess(deviceAddr, deviceName, btn) {
+  if (!currentAddress) { showToast("请先连接钱包"); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const message   = `访问请求:${deviceAddr}, 时间戳:${timestamp}`;
+
+  showModal('🔐', '等待签名', `MetaMask 将弹出签名请求。<br>此操作不消耗 Gas 费用。<span class="highlight">签名即身份证明</span>`);
+
+  try {
+    const signature = await signer.signMessage(message);
+    updateModal('⏳', '验证中...', `签名完成，正在向设备端发送验证请求...<span class="highlight">链下验签 → 链上权限查询</span>`);
+
+    const response = await fetch(PYTHON_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ user_address:currentAddress, message, signature })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.status === 'success') {
+      updateModal('✅', '认证通过',
+        `身份验证与权限校验全部通过。<br>
+        <span class="highlight">访问记录已永久写入区块链</span><br>
+        设备：${deviceName}<br>
+        时间：${new Date(timestamp*1000).toLocaleString('zh-CN')}`
+      );
+      addLocalLog(currentAddress, deviceAddr, timestamp, true);
+    } else {
+      updateModal('🚫', '访问被拒绝', data.message || '认证失败');
+      addLocalLog(currentAddress, deviceAddr, timestamp, false);
+    }
+  } catch(e) {
+    if (e.code === 4001) {
+      updateModal('↩', '已取消', '用户取消了签名操作。');
+    } else if (e.message && e.message.includes('fetch')) {
+      updateModal('⚠️', '设备离线', `无法连接设备端 (localhost:5000)<br><span class="highlight">请确认 camera_v3.py 正在运行</span>`);
+    } else {
+      updateModal('⚠️', '发生错误', e.message);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '请求访问 →';
+    refreshLogs();
+  }
+}
+
+// ══════════════════════════════════════
+// LOG
+// ══════════════════════════════════════
+async function refreshLogs() {
+  const feed = document.getElementById('logFeed');
+  try {
+    const events = await contract.queryFilter(contract.filters.AccessLogged(), -5000);
+    if (!events.length) {
+      if (feed.querySelector('.empty-state')) return;
+      return;
+    }
+    feed.innerHTML = '';
+    [...events].reverse().slice(0,20).forEach(ev => {
+      feed.appendChild(buildLogEntry(ev.args.user, ev.args.device, Number(ev.args.timestamp), true, ev.transactionHash));
+    });
+  } catch(e) {}
+}
+
+function addLocalLog(user, device, timestamp, success) {
+  const feed = document.getElementById('logFeed');
+  const empty = feed.querySelector('.empty-state');
+  if (empty) empty.remove();
+  feed.insertBefore(buildLogEntry(user, device, timestamp, success, null), feed.firstChild);
+}
+
+function buildLogEntry(user, device, timestamp, success, txHash) {
+  const el = document.createElement('div');
+  el.className = `log-entry ${success ? 'success' : 'denied'}`;
+  const time = new Date(timestamp*1000).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const hashEl = txHash
+    ? `<a class="log-hash" href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">${txHash.slice(0,10)}... ↗</a>`
+    : `<span class="log-hash">本地记录</span>`;
+  el.innerHTML = `
+    <div class="log-time">${time}</div>
+    <div class="log-body">
+      <div class="log-addr">${shortAddr(user)}</div>
+      <div class="log-msg">访问了 ${shortAddr(device)} · ${success ? '✓ 认证通过' : '✗ 访问拒绝'}</div>
+    </div>
+    ${hashEl}
+  `;
+  return el;
+}
+
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.role-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('tab-btn-' + tab).classList.add('active');
+}
+
+// ══════════════════════════════════════
+// MODAL / TOAST / UTILS
+// ══════════════════════════════════════
+function showModal(icon,title,body) { document.getElementById('modalIcon').textContent=icon; document.getElementById('modalTitle').textContent=title; document.getElementById('modalBody').innerHTML=body; document.getElementById('modal').classList.add('show'); }
+function updateModal(icon,title,body) { document.getElementById('modalIcon').textContent=icon; document.getElementById('modalTitle').textContent=title; document.getElementById('modalBody').innerHTML=body; }
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function shortAddr(addr) { if(!addr) return ''; return addr.slice(0,6)+'...'+addr.slice(-4); }
+</script>
+</body>
+</html>
